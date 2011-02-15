@@ -1,0 +1,64 @@
+apply plugin: 'groovy'
+apply plugin: 'idea'
+version = '0.1'
+ant.property(environment: 'env')
+
+if(!ant.properties['env.GRADLE_HOME']) {
+    throw new Exception('Please set $GRADLE_HOME')
+}
+
+def gradleHomeDir = System.getenv().get('GRADLE_HOME')
+
+configurations {
+    provided {
+        description = 'Non-exported compile-time dependencies'
+    }
+
+    testProvided {
+        description = 'Non-exported compile-time test dependencies'
+    }
+}
+
+sourceSets {
+    main {
+        compileClasspath += configurations.provided
+        compileClasspath += configurations.testProvided
+    }
+
+    test {
+        compileClasspath += configurations.testProvided
+        runtimeClasspath += configurations.testProvided
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    groovy group: 'org.codehaus.groovy', name: 'groovy-all', version: '1.7.+'
+    compile group: 'com.h2database', name: 'h2', version: '1.3.148'
+    testCompile group: 'junit', name: 'junit', version: '4.+'
+}
+
+ideaProject {
+    javaVersion = '1.6'
+
+    withXml { provider ->
+        def node = provider.asNode()
+
+        // Use GIT
+        def vcsConfig = node.component.find { it.'@name' == 'VcsDirectoryMappings' }
+        vcsConfig.mapping[0].'@vcs' = 'Git'
+
+        // Set Gradle home
+        def gradleSettings = node.appendNode('component', [name: 'GradleSettings'])
+        gradleSettings.appendNode('option', [name: 'SDK_HOME', value: gradleHomeDir])
+    }
+}
+
+ideaModule {
+    scopes.COMPILE.plus.add(configurations.provided)
+    scopes.COMPILE.plus.add(configurations.testProvided)
+    scopes.TEST.plus.add(configurations.testProvided)
+}
