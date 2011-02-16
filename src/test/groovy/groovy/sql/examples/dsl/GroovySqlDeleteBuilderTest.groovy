@@ -4,20 +4,37 @@ import groovy.sql.Sql
 import groovy.sql.examples.GroovySqlHandler
 import org.junit.Test
 
-/**
- * Created by IntelliJ IDEA.
- * User: ben
- * Date: 2/15/11
- * Time: 1:46 PM
- * To change this template use File | Settings | File Templates.
- */
 class GroovySqlDeleteBuilderTest {
+    static final String TABLE_NAME = 'city'
+
     @Test
-    public void testBuilding() {
+    public void testBuildingWithWhereStatement() {
         Sql sql = GroovySqlHandler.createDriverManagerSql()
         def builder = new GroovySqlDeleteBuilder(sql)
-        builder.delete('city') {
-            where("name = 'Spieskappel'")
+        builder.delete(TABLE_NAME) {
+            where("name = 'Grand Rapids'")
+        }
+    }
+
+    @Test
+    public void testBuildingWithWhereAndOrStatements() {
+        Sql sql = GroovySqlHandler.createDriverManagerSql()
+        def builder = new GroovySqlDeleteBuilder(sql)
+        builder.delete(TABLE_NAME) {
+            where("name = 'Grand Rapids'")
+            or("name = 'Little Rock'")
+        }
+    }
+
+    @Test
+    public void testBuildingWithNestedStatements() {
+        Sql sql = GroovySqlHandler.createDriverManagerSql()
+        def builder = new GroovySqlDeleteBuilder(sql)
+        builder.delete(TABLE_NAME) {
+            where("name is not null")
+            and {
+                or("name = 'Little Rock'")
+            }
         }
     }
 }

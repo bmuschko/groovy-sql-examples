@@ -3,14 +3,12 @@ package groovy.sql.examples.dsl
 import groovy.sql.Sql
 
 class GroovySqlInsertBuilder extends AbstractGroovySqlBuilder {
-    static final INSERT_NODE = 'insert'
-    static final ROW_NODE = 'row'
-    static final TABLE_ATTRIBUTE = 'table'
-    private Insert insert
+    static final String INSERT_NODE = 'insert'
+    static final String ROW_NODE = 'row'
+    static final String TABLE_ATTRIBUTE = 'table'
 
     public GroovySqlInsertBuilder(Sql sql) {
         super(sql)
-        this.insert = new Insert()
     }
 
     @Override
@@ -38,7 +36,8 @@ class GroovySqlInsertBuilder extends AbstractGroovySqlBuilder {
     @Override
     protected Object createNode(Object name, Map attributes, Object value) {
         switch(name) {
-            case INSERT_NODE: insert.table = (attributes && attributes.containsKey(TABLE_ATTRIBUTE)) ? attributes[TABLE_ATTRIBUTE] : value
+            case INSERT_NODE: Insert insert = new Insert()
+                              insert.table = (attributes && attributes.containsKey(TABLE_ATTRIBUTE)) ? attributes[TABLE_ATTRIBUTE] : value
                               return insert
             case ROW_NODE: Row row = new Row()
                            row.columnNames = attributes.keySet()
@@ -52,12 +51,12 @@ class GroovySqlInsertBuilder extends AbstractGroovySqlBuilder {
         if(parent == null) {
             def insertedIds = []
 
-            insert.rows.each { row ->
-                def ids = sql.executeInsert(createPreparedStatement(insert.table, row.columnNames), row.values)
+            node.rows.each { row ->
+                def ids = sql.executeInsert(createPreparedStatement(node.table, row.columnNames), row.values)
                 insertedIds.addAll ids
             }
 
-            insert.result = insertedIds
+            node.result = insertedIds
         }
     }
 
