@@ -10,5 +10,5 @@ logger.addHandler(new ConsoleHandler(level: Level.FINE))
 def sql = GroovySqlHandler.createDriverManagerSql()
 
 sql.eachRow("select * from city") { city ->
-	println city.id + " " + city[1] + " " + city.state + " " + city.founded_year
+    println city.id + " " + city[1] + " " + city.state + " " + city.founded_year
 }

@@ -3,9 +3,9 @@ package groovy.sql.examples.dsl
 import groovy.sql.Sql
 
 abstract class AbstractGroovySqlBuilder extends BuilderSupport {
-	Sql sql
+    Sql sql
 
-	public AbstractGroovySqlBuilder(Sql sql) {
-		this.sql = sql
-	}
+    public AbstractGroovySqlBuilder(Sql sql) {
+        this.sql = sql
+    }
 }

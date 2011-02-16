@@ -8,9 +8,9 @@ def newCities = [boston, charleston, washingtonDc]
 
 Sql sql = GroovySqlHandler.createDriverManagerSql()
 int[] updateCount = sql.withBatch { stmt ->
-	newCities.each { city ->
-		stmt.addBatch "INSERT INTO city (name, state, founded_year) VALUES ('$city.name', '$city.state', $city.foundedYear)"
-	}
+    newCities.each { city ->
+        stmt.addBatch "INSERT INTO city (name, state, founded_year) VALUES ('$city.name', '$city.state', $city.foundedYear)"
+    }
 }
 
 println "Updated $updateCount record(s)."

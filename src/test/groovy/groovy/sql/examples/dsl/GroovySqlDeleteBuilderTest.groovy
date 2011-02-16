@@ -12,12 +12,12 @@ import org.junit.Test
  * To change this template use File | Settings | File Templates.
  */
 class GroovySqlDeleteBuilderTest {
-	@Test
-	public void testBuilding() {
-		Sql sql = GroovySqlHandler.createDriverManagerSql()
-		def builder = new GroovySqlDeleteBuilder(sql)
-		builder.delete('city') {
-			where("name = 'Spieskappel'")
-		}
-	}
+    @Test
+    public void testBuilding() {
+        Sql sql = GroovySqlHandler.createDriverManagerSql()
+        def builder = new GroovySqlDeleteBuilder(sql)
+        builder.delete('city') {
+            where("name = 'Spieskappel'")
+        }
+    }
 }
