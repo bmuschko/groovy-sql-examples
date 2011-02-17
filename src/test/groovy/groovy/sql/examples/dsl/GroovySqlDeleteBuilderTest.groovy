@@ -2,14 +2,26 @@ package groovy.sql.examples.dsl
 
 import groovy.sql.Sql
 import groovy.sql.examples.GroovySqlHandler
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
 
 class GroovySqlDeleteBuilderTest {
     static final String TABLE_NAME = 'city'
+    private Sql sql
+
+    @Before
+    public void setUp() {
+        sql = GroovySqlHandler.createDriverManagerSql()
+    }
+
+    @After
+    public void tearDown() {
+        sql = null
+    }
 
     @Test
     public void testBuildingWithWhereStatement() {
-        Sql sql = GroovySqlHandler.createDriverManagerSql()
         def builder = new GroovySqlDeleteBuilder(sql)
         builder.delete(TABLE_NAME) {
             where("name = 'Grand Rapids'")
@@ -18,7 +30,6 @@ class GroovySqlDeleteBuilderTest {
 
     @Test
     public void testBuildingWithWhereAndOrStatements() {
-        Sql sql = GroovySqlHandler.createDriverManagerSql()
         def builder = new GroovySqlDeleteBuilder(sql)
         builder.delete(TABLE_NAME) {
             where("name = 'Grand Rapids'")
@@ -28,7 +39,6 @@ class GroovySqlDeleteBuilderTest {
 
     @Test
     public void testBuildingWithNestedStatements() {
-        Sql sql = GroovySqlHandler.createDriverManagerSql()
         def builder = new GroovySqlDeleteBuilder(sql)
         builder.delete(TABLE_NAME) {
             where("name is not null")

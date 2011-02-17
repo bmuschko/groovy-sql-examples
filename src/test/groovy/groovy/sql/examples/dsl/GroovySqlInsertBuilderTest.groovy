@@ -2,14 +2,26 @@ package groovy.sql.examples.dsl
 
 import groovy.sql.Sql
 import groovy.sql.examples.GroovySqlHandler
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
 
 class GroovySqlInsertBuilderTest {
     static final String TABLE_NAME = 'city'
+    private Sql sql
+
+    @Before
+    public void setUp() {
+        sql = GroovySqlHandler.createDriverManagerSql()
+    }
+
+    @After
+    public void tearDown() {
+        sql = null
+    }
 
     @Test
     public void testBuildInsertWithoutTableAttribute() {
-        Sql sql = GroovySqlHandler.createDriverManagerSql()
         def builder = new GroovySqlInsertBuilder(sql)
         def insert = builder.insert(TABLE_NAME) {
             row(name: 'Grand Rapids', state: 'Michigan', founded_year: 1825)
@@ -22,7 +34,6 @@ class GroovySqlInsertBuilderTest {
 
     @Test
     public void testBuildInsertWithTableAttribute() {
-        Sql sql = GroovySqlHandler.createDriverManagerSql()
         def builder = new GroovySqlInsertBuilder(sql)
         def insert = builder.insert(table: TABLE_NAME) {
             row(name: 'Grand Rapids', state: 'Michigan', founded_year: 1825)
