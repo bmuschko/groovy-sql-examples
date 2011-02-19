@@ -1,50 +1,83 @@
 package groovy.sql.examples.dsl
 
-import groovy.sql.Sql
-import groovy.sql.examples.GroovySqlHandler
-import org.junit.After
-import org.junit.Before
 import org.junit.Test
 
-class GroovySqlDeleteBuilderTest {
-    static final String TABLE_NAME = 'city'
-    private Sql sql
-
-    @Before
-    public void setUp() {
-        sql = GroovySqlHandler.createDriverManagerSql()
-    }
-
-    @After
-    public void tearDown() {
-        sql = null
-    }
-
+class GroovySqlDeleteBuilderTest extends GroovySqlBuilderFixture {
     @Test
-    public void testBuildingWithWhereStatement() {
+    public void testBuildingWithEqualsCriteria() {
         def builder = new GroovySqlDeleteBuilder(sql)
         builder.delete(TABLE_NAME) {
-            where("name = 'Grand Rapids'")
+            eq(name: 'name', value: 'Grand Rapids')
         }
     }
 
     @Test
-    public void testBuildingWithWhereAndOrStatements() {
+    public void testBuildingWithNotEqualsCriteria() {
         def builder = new GroovySqlDeleteBuilder(sql)
         builder.delete(TABLE_NAME) {
-            where("name = 'Grand Rapids'")
-            or("name = 'Little Rock'")
+            ne(name: 'name', value: 'Grand Rapids')
         }
     }
 
     @Test
-    public void testBuildingWithNestedStatements() {
+    public void testBuildingWithLikeCriteria() {
         def builder = new GroovySqlDeleteBuilder(sql)
         builder.delete(TABLE_NAME) {
-            where("name is not null")
+            like(name: 'name', value: 'Grand%')
+        }
+    }
+
+    @Test
+    public void testBuildingWithIsNullCriteria() {
+        def builder = new GroovySqlDeleteBuilder(sql)
+        builder.delete(TABLE_NAME) {
+            isNull(name: 'name')
+        }
+    }
+
+    @Test
+    public void testBuildingWithIsNotNullCriteria() {
+        def builder = new GroovySqlDeleteBuilder(sql)
+        builder.delete(TABLE_NAME) {
+            isNotNull(name: 'name')
+        }
+    }
+
+    @Test
+    public void testBuildingWithAndStatement() {
+        def builder = new GroovySqlDeleteBuilder(sql)
+        builder.delete(TABLE_NAME) {
             and {
-                or("name = 'Little Rock'")
+                eq(name: 'name', value: 'Grand Rapids')
+                isNotNull(name: 'name')
+            }
+        }
+    }
+
+    @Test
+    public void testBuildingWithOrStatement() {
+        def builder = new GroovySqlDeleteBuilder(sql)
+        builder.delete(TABLE_NAME) {
+            or {
+                eq(name: 'name', value: 'Grand Rapids')
+                eq(name: 'name', value: 'Little Rock')
+            }
+        }
+    }
+
+    @Test
+    public void testBuildingWithNestedLogicStatements() {
+        def builder = new GroovySqlDeleteBuilder(sql)
+        builder.delete(TABLE_NAME) {
+            and {
+                isNotNull(name: 'name')
+
+                or {
+                    eq(name: 'name', value: 'Grand Rapids')
+                    eq(name: 'name', value: 'Little Rock')
+                }
             }
         }
     }
 }
+

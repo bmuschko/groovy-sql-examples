@@ -1,25 +1,8 @@
 package groovy.sql.examples.dsl
 
-import groovy.sql.Sql
-import groovy.sql.examples.GroovySqlHandler
-import org.junit.After
-import org.junit.Before
 import org.junit.Test
 
-class GroovySqlInsertBuilderTest {
-    static final String TABLE_NAME = 'city'
-    private Sql sql
-
-    @Before
-    public void setUp() {
-        sql = GroovySqlHandler.createDriverManagerSql()
-    }
-
-    @After
-    public void tearDown() {
-        sql = null
-    }
-
+class GroovySqlInsertBuilderTest extends GroovySqlBuilderFixture {
     @Test
     public void testBuildInsertWithoutTableAttribute() {
         def builder = new GroovySqlInsertBuilder(sql)

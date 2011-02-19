@@ -2,129 +2,246 @@ package groovy.sql.examples.dsl
 
 import groovy.sql.Sql
 
-class GroovySqlDeleteBuilder extends AbstractGroovySqlBuilder {
-    static final String DELETE_NODE = 'delete'
-    static final String WHERE_NODE = 'where'
-    static final String AND_NODE = 'and'
-    static final String OR_NODE = 'or'
-    static final String TABLE_ATTRIBUTE = 'table'
-
+class GroovySqlDeleteBuilder extends AbstractGroovySqlFactoryBuilder {
     public GroovySqlDeleteBuilder(Sql sql) {
         super(sql)
+        registerFactories()
     }
 
-    @Override
-    protected void setParent(Object parent, Object child) {
-        if(child instanceof Statement) {
-            parent.statements << child
-        }
+    def registerFactories() {
+        registerFactory('delete', new DeleteFactory())
+        registerFactory('eq', new EqualsCriteriaFactory())
+        registerFactory('ne', new NotEqualsCriteriaFactory())
+        registerFactory('like', new LikeCriteriaFactory())
+        registerFactory('isNull', new IsNullCriteriaFactory())
+        registerFactory('isNotNull', new IsNotNullCriteriaFactory())
+        registerFactory('and', new AndLogicOperationFactory())
+        registerFactory('or', new OrLogicOperationFactory())
     }
 
-    @Override
-    protected Object createNode(Object name) {
-        createNode(name, null, null)
-    }
-
-    @Override
-    protected Object createNode(Object name, Object value) {
-        createNode(name, null, value)
-    }
-
-    @Override
-    protected Object createNode(Object name, Map attributes) {
-        createNode(name, attributes, null)
-    }
-
-    @Override
-    protected Object createNode(Object name, Map attributes, Object value) {
-        switch(name) {
-            case DELETE_NODE: Delete delete = new Delete()
-                              delete.table = (attributes && attributes.containsKey(TABLE_ATTRIBUTE)) ? attributes[TABLE_ATTRIBUTE] : value
-                              return delete
-            case [WHERE_NODE, AND_NODE, OR_NODE]: Statement statement = StatementFactory.instance.getStatement(name)
-                                                  statement.expression = value
-                                                  return statement
-        }
-    }
-
-    @Override
-    protected void nodeCompleted(Object parent, Object node) {
-        if(parent == null) {
-            String statement = createStatement(node.table, node.statements)
-            sql.execute statement
-        }
-    }
-
-    private String createStatement(String table, List<Statement> statements) {
-        def expression
-
-        if(statements.size() > 0) {
-            Statement firstStatement = statements.get(0)
-
-            if(!firstStatement instanceof WhereStatement) {
-                throw new IllegalArgumentException("First statement always has to be a WHERE statement!")
+    private abstract class CriteriaAbstractFactory extends AbstractFactory {
+        @Override
+        void setParent(FactoryBuilderSupport builder, Object parent, Object child) {
+            if(child instanceof Criteria) {
+                parent.criterias << child
             }
-            else {
-                expression = "WHERE ${firstStatement.expression}"
-            }
+        }
+    }
 
-            if(statements.size() > 1) {
-                (1..statements.size() - 1).each { i ->
-                    Statement statement = statements.get(i)
-                    expression += " ${statement.type} ${statement.expression}"
+    private abstract class KeyValuePairCriteriaAbstractFactory extends CriteriaAbstractFactory {
+        final String NAME_ATTRIBUTE = 'name'
+        final String VALUE_ATTRIBUTE = 'value'
+
+        @Override
+        public boolean isLeaf() {
+            true
+        }
+    }
+
+    private abstract class LogicOperatorCriteriaAbstractFactory extends CriteriaAbstractFactory {
+        @Override
+        public boolean isLeaf() {
+            false
+        }
+    }
+
+    private class DeleteFactory extends AbstractFactory {
+        final String TABLE_ATTRIBUTE = 'table'
+
+        @Override
+        Object newInstance(FactoryBuilderSupport builder, Object name, Object value, Map attributes) {
+            Delete delete = new Delete()
+            delete.table = (attributes && attributes.containsKey(TABLE_ATTRIBUTE)) ? attributes[TABLE_ATTRIBUTE] : value
+            delete
+        }
+
+        @Override
+        void onNodeCompleted(FactoryBuilderSupport builder, Object parent, Object node) {
+            String statement = createStatement(node.table, node.criterias)
+            builder.sql.execute statement
+        }
+
+        private String createStatement(String table, criterias) {
+            def expression = new StringBuilder()
+
+            if(criterias.size() > 0) {
+                criterias.eachWithIndex { criteria, index ->
+                    if(index == 0) {
+                        expression <<= "WHERE "
+                    }
+                    else {
+                        expression <<= " AND "
+                    }
+
+                    if(criteria instanceof Criteria) {
+                        expression <<= criteria.renderExpression()
+                    }
                 }
             }
+
+            "DELETE FROM ${table} ${expression}"
         }
 
-        "DELETE FROM ${table} ${expression}"
+        @Override
+        public boolean isLeaf() {
+            false
+        }
+    }
+
+    private class EqualsCriteriaFactory extends KeyValuePairCriteriaAbstractFactory {
+        @Override
+        Object newInstance(FactoryBuilderSupport builder, Object name, Object value, Map attributes) {
+            return new EqualsKeyValuePair(attributes[NAME_ATTRIBUTE], attributes[VALUE_ATTRIBUTE])
+        }
+    }
+
+    private class NotEqualsCriteriaFactory extends KeyValuePairCriteriaAbstractFactory {
+        @Override
+        Object newInstance(FactoryBuilderSupport builder, Object name, Object value, Map attributes) {
+            return new NotEqualsKeyValuePair(attributes[NAME_ATTRIBUTE], attributes[VALUE_ATTRIBUTE])
+        }
+    }
+
+    private class LikeCriteriaFactory extends KeyValuePairCriteriaAbstractFactory {
+        @Override
+        Object newInstance(FactoryBuilderSupport builder, Object name, Object value, Map attributes) {
+            return new LikeKeyValuePair(attributes[NAME_ATTRIBUTE], attributes[VALUE_ATTRIBUTE])
+        }
+    }
+
+    private class IsNullCriteriaFactory extends KeyValuePairCriteriaAbstractFactory {
+        @Override
+        Object newInstance(FactoryBuilderSupport builder, Object name, Object value, Map attributes) {
+            return new EqualsKeyValuePair(attributes[NAME_ATTRIBUTE], null)
+        }
+    }
+
+    private class IsNotNullCriteriaFactory extends KeyValuePairCriteriaAbstractFactory {
+        @Override
+        Object newInstance(FactoryBuilderSupport builder, Object name, Object value, Map attributes) {
+            return new NotEqualsKeyValuePair(attributes[NAME_ATTRIBUTE], null)
+        }
+    }
+
+    private class AndLogicOperationFactory extends LogicOperatorCriteriaAbstractFactory {
+        @Override
+        Object newInstance(FactoryBuilderSupport builder, Object name, Object value, Map attributes) {
+            return new AndLogicOperator()
+        }
+    }
+
+    private class OrLogicOperationFactory extends LogicOperatorCriteriaAbstractFactory {
+        @Override
+        Object newInstance(FactoryBuilderSupport builder, Object name, Object value, Map attributes) {
+            return new OrLogicOperator()
+        }
     }
 
     private class Delete {
         String table
-        List<Statement> statements = []
+        def criterias = []
     }
 
-    private class Statement {
-        Type type
-        String expression
-        List<Statement> statements = []
-
-        Statement(Type type) {
-            this.type = type
-        }
-
-        public enum Type {
-            WHERE, AND, OR
-        }
+    private interface Criteria {
+        def renderExpression()
     }
 
-    private class WhereStatement extends Statement {
-        WhereStatement() {
-            super(Type.WHERE)
+    private abstract class KeyValuePair implements Criteria {
+        String name
+        Object value
+
+        KeyValuePair(name, value) {
+            this.name = name
+            this.value = value
+        }
+
+        String getCriteriaValue(value) {
+            value instanceof String ? "'${value}'" : value
         }
     }
 
-    private class AndStatement extends Statement {
-        AndStatement() {
-            super(Type.AND)
+    private class EqualsKeyValuePair extends KeyValuePair {
+        EqualsKeyValuePair(name, value) {
+            super(name, value)
         }
-    }
 
-    private class OrStatement extends Statement {
-        OrStatement() {
-            super(Type.OR)
-        }
-    }
-
-    @Singleton
-    private class StatementFactory {
-        Statement getStatement(String name) {
-            switch(name) {
-                case GroovySqlDeleteBuilder.WHERE_NODE: return new WhereStatement()
-                case GroovySqlDeleteBuilder.AND_NODE: return new AndStatement()
-                case GroovySqlDeleteBuilder.OR_NODE: return new OrStatement()
-                default: throw new IllegalArgumentException("Unknown statement type '$name'")
+        @Override
+        def renderExpression() {
+            if(value) {
+                return "${name} = ${getCriteriaValue(value)}"
             }
+            else {
+                return "${name} is null"
+            }
+        }
+    }
+
+    private class NotEqualsKeyValuePair extends KeyValuePair {
+        NotEqualsKeyValuePair(name, value) {
+            super(name, value)
+        }
+
+        @Override
+        def renderExpression() {
+            if(value) {
+                return "${name} != ${getCriteriaValue(value)}"
+            }
+            else {
+                return "${name} is not null"
+            }
+        }
+    }
+
+    private class LikeKeyValuePair extends KeyValuePair {
+        LikeKeyValuePair(name, value) {
+            super(name, value)
+        }
+
+        @Override
+        def renderExpression() {
+            return "${name} like ${getCriteriaValue(value)}"
+        }
+    }
+
+    private abstract class LogicOperator implements Criteria {
+        def criterias = []
+    }
+
+    private class AndLogicOperator extends LogicOperator {
+        @Override
+        def renderExpression() {
+            def expression = new StringBuilder()
+            expression <<= "("
+
+            criterias.eachWithIndex { nestedCriteria, index ->
+                expression <<= nestedCriteria.renderExpression()
+
+                if(index < criterias.size() - 1) {
+                    expression <<= " AND "
+                }
+            }
+
+            expression <<= ")"
+            expression
+        }
+    }
+
+    private class OrLogicOperator extends LogicOperator {
+        @Override
+        def renderExpression() {
+            def expression = new StringBuilder()
+            expression <<= "("
+
+            criterias.eachWithIndex { nestedCriteria, index ->
+                expression <<= nestedCriteria.renderExpression()
+
+                if(index < criterias.size() - 1) {
+                    expression <<= " OR "
+                }
+            }
+
+            expression <<= ")"
+            expression
         }
     }
 }
